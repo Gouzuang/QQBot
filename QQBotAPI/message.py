@@ -1,4 +1,5 @@
-
+import pandas as pd
+from functools import lru_cache
 class Person():
     def __init__(self, user_id, nickname='',card=''):
         self._user_id = user_id
@@ -41,7 +42,7 @@ class MessageChain():
         elif msg["type"] == "Image":
             return ImageMessage(msg["data"]["url"], msg["data"]["name"], msg["data"]["file_size"])
         elif msg["type"] == "Face":
-            return FaceMessage(msg["data"]["face_id"])
+            return BuildInFaceMessage(msg["data"]["face_id"])
         elif msg["type"] == "At":
             return AtMessage(msg["data"]["target"])
         elif msg["type"] == "File":
@@ -74,9 +75,22 @@ class ImageMessage():
     def __str__(self):
         return self._name
     
-class FaceMessage():
+class BuildInFaceMessage():
     def __init__(self, face_id):
         self._face_id = face_id
+        self._discription = self.find_discription(face_id)
+        
+    @lru_cache(maxsize=1)  # 缓存最近读取的CSV数据
+    def _read_face_data(self):
+        return pd.read_csv("face.csv")
+    
+    def find_discription(self, face_id):
+        data = self._read_face_data()
+        row = data[data['face_id'] == face_id]
+        if not row.empty and row.iloc[0]['type'] == 1:
+            return row.iloc[0]['description']
+        return "无描述"
+        
         
     def __str__(self):
         return self._face_id
