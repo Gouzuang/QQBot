@@ -1,1 +1,0 @@
-log_level = ['debug','info','warning','error','critical'][0]
