@@ -1,5 +1,5 @@
 import pytest
-from QQBotAPI.message import Person, MessageChain, TextMessage, ImageMessage, FaceMessage, AtMessage, FileMessage, VoiceMessage, JsonMessage
+from QQBotAPI.message import Person, MessageChain, TextMessage, ImageMessage, BuildInFaceMessage, AtMessage, FileMessage, VoiceMessage, JsonMessage
 
 def test_person():
     person = Person(123456, "测试昵称", "群名片")
@@ -18,8 +18,11 @@ def test_message_types():
     image_msg = ImageMessage("http://example.com/image.jpg", "test.jpg", 1024)
     assert str(image_msg) == "test.jpg"
 
-    face_msg = FaceMessage("123")
-    assert str(face_msg) == "123"
+    face_msg = BuildInFaceMessage("10")
+    assert str(face_msg) == "[表情:尴尬]"
+    
+    face_msg = BuildInFaceMessage(24)
+    assert str(face_msg) == "[表情:饥饿]"
 
     at_msg = AtMessage("@用户名")
     assert str(at_msg) == "@用户名"

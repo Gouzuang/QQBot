@@ -1,5 +1,6 @@
-import pandas as pd
 from functools import lru_cache
+from .data import QQ_FACE_DISCRIPTION 
+
 class Person():
     def __init__(self, user_id, nickname='',card=''):
         self._user_id = user_id
@@ -35,7 +36,6 @@ class MessageChain():
         for msg in raw_data["message"]:
             self._message.append(self.format_message(msg))
         
-    
     def format_message(self,msg):
         if msg["type"] == "Text":
             return TextMessage(msg["data"]["text"])
@@ -58,7 +58,6 @@ class MessageChain():
             str += f"{msg}"
         return str
         
-        
 class TextMessage():
     def __init__(self, text):
         self._text = text
@@ -77,23 +76,14 @@ class ImageMessage():
     
 class BuildInFaceMessage():
     def __init__(self, face_id):
-        self._face_id = face_id
-        self._discription = self.find_discription(face_id)
-        
-    @lru_cache(maxsize=1)  # 缓存最近读取的CSV数据
-    def _read_face_data(self):
-        return pd.read_csv("face.csv")
+        self._face_id = int(face_id)
+        self._description = self.find_description(self._face_id)
     
-    def find_discription(self, face_id):
-        data = self._read_face_data()
-        row = data[data['face_id'] == face_id]
-        if not row.empty and row.iloc[0]['type'] == 1:
-            return row.iloc[0]['description']
-        return "无描述"
-        
+    def find_description(self, face_id):
+        return QQ_FACE_DISCRIPTION.get(face_id, "无描述")
         
     def __str__(self):
-        return self._face_id
+        return f"[表情:{self._description}]"
     
 class AtMessage():
     def __init__(self, target):
