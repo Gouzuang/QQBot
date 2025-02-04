@@ -416,8 +416,8 @@ class QQBotHttp():
         try:
             response = requests.get(url, params=params).json()
             if response.get('status') == 'ok':
-            self.logger.info("Successfully deleted message %s", message_id) 
-            return True
+                self.logger.info("Successfully deleted message %s", message_id) 
+                return True
             raise QQBotAPIError("API request failed", response)
         except requests.RequestException as e:
             raise QQBotAPIError(f"Connection failed: {str(e)}")
@@ -468,9 +468,10 @@ class QQBotHttp():
         try:
             response = requests.get(url, params=params).json()
             if response.get('status') == 'ok':
-            self.logger.info("Successfully got forward message %s", message_id)
-            messages = response.get('data', {}).get('messages', [])
-            # TODO 解析消息
+                self.logger.info("Successfully got forward message %s", message_id)
+                messages = response.get('data', {}).get('messages', [])
+                # TODO 解析消息
+            raise QQBotAPIError("API request failed", response)
         except requests.RequestException as e:
             raise QQBotAPIError(f"Connection failed: {str(e)}")
         
