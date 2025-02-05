@@ -1,11 +1,18 @@
 
+import QQBotAPI
+from QQBotAPI.message import ReceivedMessageChain
+
+
 class echo_message:
-    def __init__(self, data,QQBot):
-        pass
+    def __init__(self, msg:ReceivedMessageChain,QQBot:QQBotAPI.QQBot):
+        rep = QQBot.MessageManager.get_message_via_id(msg.reply_info,msg.group())
+        msg.reply(rep,QQBot)
 
     @classmethod
-    def check(cls, data):
-        pass
+    def check(cls, msg):
+        if msg.is_reply and msg.text_only().strip() == "echo":
+                    return "echo"
+        return ""
 
     @classmethod
     def register(cls):
@@ -15,8 +22,6 @@ class echo_message:
             'name': 'echo_message'
         }
         
-    def run(self):
-        pass
 
 
 functions = [echo_message,]

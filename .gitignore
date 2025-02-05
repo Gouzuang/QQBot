@@ -164,7 +164,7 @@ cython_debug/
 keys.*
 
 log/*
-database/*
+databases/*
 
 .vscode
 

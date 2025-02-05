@@ -1,62 +1,33 @@
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+from typing import List
+
+from QQBotAPI import DataManager
 from .QQBotHttp import QQBotHttp
 from .message import *
 from .data import QQ_FACE_DISCRIPTION
 from .person import Person, Group
 from .errors import QQBotAPIError
+from shared.log import LogConfig
 
 class QQBot:
     def __init__(self,url,client_id=0):
+        # 确保 URL 包含协议前缀
+        if not url.startswith(('http://', 'https://')):
+            url = 'http://' + url
         self.api = QQBotHttp(url,client_id)
-        self.logger = self._setup_logger()
+        self.qq_id = "Temp"
+        self.logger = LogConfig().get_logger(__name__)
         
         self.logger.info("Initializing QQBotHttp with URL: %s", url)
-        self.qq_id = self.api.get_login_info().get('qq')
+        self.qq_id = self.api.get_login_info().get('user_id')
         self.nickname = self.api.get_login_info().get('nickname')
         self.friend_list = self.get_friend_list()
         
-        self.logger.info("Bot initialized. QQ ID: %s, Nickname: %s", self.qq_id, self.nickname)
+        self.logger = LogConfig().get_logger(__name__)
         
-    def _setup_logger(self):
-        """设置独立的日志系统"""
-        logger = logging.getLogger(f'QQBotHttp_{id(self)}')  # 使用实例ID确保唯一性
-        logger.setLevel(logging.INFO)
-        
-        # 确保logger不会重复添加handler
-        if not logger.handlers:
-            # 控制台输出
-            console_handler = logging.StreamHandler()
-            console_handler.setLevel(logging.INFO)
-            console_formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            )
-            console_handler.setFormatter(console_formatter)
-            logger.addHandler(console_handler)
-            
-            # 文件输出
-            log_dir = 'logs'
-            if not os.path.exists(log_dir):
-                os.makedirs(log_dir)
-            
-            file_handler = RotatingFileHandler(
-                os.path.join(log_dir, 'qqbot.log'),
-                maxBytes=1024*1024,  # 1MB
-                backupCount=5,
-                encoding='utf-8'
-            )
-            file_handler.setLevel(logging.INFO)
-            file_formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levellevel)s - %(message)s'
-            )
-            file_handler.setFormatter(file_formatter)
-            logger.addHandler(file_handler)
-            
-            # 防止日志向上层传递
-            logger.propagate = False
-            
-        return logger
+        self.MessageManager = DataManager.MessageManager(self.qq_id)
     
     #好友信息
     def get_user_info(self,user_id):
@@ -81,7 +52,7 @@ class QQBot:
                                       ))
         return friend_list
 
-    def send_private_message(self,user,message):
+    def send_private_message(self,user:Union[int,Person],message):
         """发送私聊消息
         
         Args:
@@ -89,13 +60,13 @@ class QQBot:
             message (List[message]): 消息内容
         """
         if isinstance(user, Person):
-            user_id = user.user_id
+            user_id = user.user_id()
         else:
             user_id = user
         messages = []
         for msg in message:
             messages.append(msg.json())
-        self.api.send_private_message(user_id,messages)
+        self.api.send_private_message(messages,user_id)
         
     def send_group_message(self,group,message):
         """发送群消息

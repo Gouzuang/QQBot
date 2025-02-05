@@ -1,38 +1,28 @@
 import sys
+import traceback
 from fastapi import FastAPI, Request
 import logging
 import os
-from datetime import datetime
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.responses import JSONResponse
 import uvicorn
 import importlib
 import pkgutil
+from QQBotAPI.message import *
+import QQBotAPI
 from Resolver import Resolver
-from state_manager import StateManager
+from manager import StateManager
+from shared.log import LogConfig
 
-# Ensure the log directory exists
-os.makedirs("logs", exist_ok=True)
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-log_file_path = f"logs/app_{timestamp}.log"
+# 初始化日志配置
+log_config = LogConfig()
+logger = log_config.get_logger(__name__)
 
-# 配置日志处理器，明确指定UTF-8编码
-file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
-stream_handler = logging.StreamHandler()
-
-# 创建格式化器
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-stream_handler.setFormatter(formatter)
-
-# 配置根日志记录器
-logging.basicConfig(
-    level=logging.DEBUG,
-    handlers=[file_handler, stream_handler]
-)
-
-# 创建FastAPI应用
+# 创建实例
 app = FastAPI()
 state_manager = StateManager()
-logger = logging.getLogger(__name__)
+bot = QQBotAPI.QQBot("192.168.3.100:3000",1)
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
@@ -58,18 +48,40 @@ async def submit(request: Request):
         message = await request.json()
         logger.debug(f"Received data: {message}")
         
-        # 检查是否是对等待状态的响应
-        if hasattr(message, 'reply_id') and hasattr(message, 'error_id'):
-            callback_data = state_manager.get_callback(message.reply_id, message.error_id)
-            if callback_data:
-                callback, data = callback_data
-                return callback(message, data)
+        if message["post_type"] == "meta_event":
+            if message["meta_event_type"] == "heartbeat":
+                pass
         
-        # 正常的消息处理流程
-        resolver = Resolver(message, bot, functions, state_manager)
-        
+        elif message["post_type"] == "message":
+            process_message(message)
+                
     except Exception as e:
         logger.error(f"Error processing request: {str(e)}")
+        logger.error(traceback.format_exc())
+
+def process_message(message):
+    message_chain = ReceivedMessageChain(message)
+    bot.MessageManager.add_message(message_chain)
+    # 检查是否是对等待状态的响应
+    try:
+        if message_chain.is_reply:
+            callback_data = state_manager.get_callback(message_chain.reply_info)
+            if callback_data:
+                logger.info(f"message is a reply for a Resolver: {message}")
+                callback, data = callback_data
+                callback(message, data)
+                return
+    except Exception as e:
+        logger.info(f"message is not a reply for a Resolver: {message}")
+            
+    # 正常的消息处理流程
+    if message_chain.is_group:
+        for msg in message_chain.message:
+            if isinstance(msg, AtMessage) and msg.target == bot.qq_id:
+                resolver = Resolver(message_chain, bot, message_functions, state_manager)
+                break
+    else:
+        resolver = Resolver(message_chain, bot, message_functions, state_manager)
 
 # 运行应用
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+import json
 import time
 from typing import Union
 import requests
@@ -6,14 +7,14 @@ import os
 from logging.handlers import RotatingFileHandler
 from .errors import QQBotAPIError
 from requests.exceptions import RequestException
+from shared.log import LogConfig
 
 class QQBotHttp():
     def __init__(self,url,client_id=0):
         self._url = url
         self._client_id = client_id
         
-        # 配置独立的日志系统
-        self.logger = self._setup_logger()
+        self.logger = LogConfig().get_logger('QQBot.HttpAPI')
         
         self.logger.info("Initializing QQBotHttp with URL: %s", url)
         self._qq_id = self.get_login_info().get('user_id')
@@ -21,66 +22,35 @@ class QQBotHttp():
         
         self.logger.info("Bot initialized. QQ ID: %s, Nickname: %s", self._qq_id, self._nickname)
 
-    def _setup_logger(self):
-        """设置独立的日志系统"""
-        logger = logging.getLogger(f'QQBotHttp_{id(self)}')  # 使用实例ID确保唯一性
-        logger.setLevel(logging.INFO)
-        
-        # 确保logger不会重复添加handler
-        if not logger.handlers:
-            # 控制台输出
-            console_handler = logging.StreamHandler()
-            console_handler.setLevel(logging.INFO)
-            console_formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            )
-            console_handler.setFormatter(console_formatter)
-            logger.addHandler(console_handler)
-            
-            # 文件输出
-            log_dir = 'logs'
-            if not os.path.exists(log_dir):
-                os.makedirs(log_dir)
-            
-            file_handler = RotatingFileHandler(
-                os.path.join(log_dir, 'qqbot.log'),
-                maxBytes=1024*1024,  # 1MB
-                backupCount=5,
-                encoding='utf-8'
-            )
-            file_handler.setLevel(logging.INFO)
-            file_formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levellevel)s - %(message)s'
-            )
-            file_handler.setFormatter(file_formatter)
-            logger.addHandler(file_handler)
-            
-            # 防止日志向上层传递
-            logger.propagate = False
-            
-        return logger
-    
-    def _make_request(self, method: str, url: str, **kwargs) -> Union[dict, list]:
+    def _make_request(self, method: str, url: str, params=None, **kwargs) -> Union[dict, list]:
         """发送HTTP请求并处理响应
         
         参数:
             method (str): HTTP方法 ('GET' 或 'POST')
             url (str): 请求URL
+            params (dict): 请求参数
             **kwargs: 传递给requests的其他参数
             
         重试3次后仍失败则抛出异常
         """
         for attempt in range(3):
             try:
-                response = requests.request(method, url, **kwargs).json()
+                if method.upper() == 'POST':
+                    # POST 请求直接发送 JSON 数据
+                    response = requests.post(url, json=params).json()
+                else:
+                    # GET 请求使用 URL 参数
+                    response = requests.get(url, params=params).json()
+                    
                 if response.get('status') == 'ok':
+                    self.logger.debug(f"API '{url}' request successful: {response}")
                     return response.get('data')
                 raise QQBotAPIError("API request failed", response)
             except (requests.RequestException, QQBotAPIError) as e:
                 self.logger.warning(f"Request attempt {attempt + 1} failed: {str(e)}")
-                if attempt == 2:  # Last attempt failed
+                if attempt == 2:
                     raise
-                time.sleep(1)  # Wait 1 second before retrying
+                time.sleep(1)
 
     #Bot 账号
     def get_login_info(self):
@@ -96,7 +66,7 @@ class QQBotHttp():
         """
         self.logger.info("Getting login info...")
         url = self._url + "/get_login_info"
-        return self._make_request('GET', url)
+        return self._make_request('POST', url)
     
     #好友信息
     def get_stranger_info(self,user_id,no_cache=False):
@@ -126,7 +96,7 @@ class QQBotHttp():
             'user_id': user_id,
             'no_cache': no_cache
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
         
     def get_friend_list(self):
         """获取好友列表。
@@ -160,7 +130,7 @@ class QQBotHttp():
         """
         url = self._url + "/get_unidirectional_friend_list"
         self.logger.debug("Getting unidirectional friend list...")
-        return self._make_request('GET', url)
+        return self._make_request('POST', url)
         
     #好友操作
     def delete_friend(self,user_id):
@@ -181,7 +151,7 @@ class QQBotHttp():
         params = {
             'user_id': user_id
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
         
     def delete_unidirectional_friend(self,user_id):
         """删除单向好友。
@@ -201,7 +171,7 @@ class QQBotHttp():
         params = {
             'user_id': user_id
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
         
     #消息
     def send_private_message(self,message,user_id):
@@ -218,7 +188,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Sending private message to user %s", user_id)
+        self.logger.info("Sending private message %s to user %s", message,user_id)
         url = self._url + "/send_private_msg"
         params = {
             'user_id': user_id,
@@ -227,7 +197,7 @@ class QQBotHttp():
         for attempt in range(3):
             try:
                 self.logger.debug("Attempt %s to send private message", attempt + 1)
-                response = self._make_request('GET', url, params=params)
+                response = self._make_request('POST', url, params=params)
                 return response
             except (requests.RequestException, QQBotAPIError):
                 if attempt == 2:
@@ -256,13 +226,13 @@ class QQBotHttp():
         url = self._url + "/send_private_msg"
         params = {
             'user_id': user_id,
-            'message': message,
+            'message': message ,
             'group_id': group_id
         }
         for attempt in range(3):
             try:
                 self.logger.debug("Attempt %s to send private message", attempt + 1)
-                response = self._make_request('GET', url, params=params)
+                response = self._make_request('POST', url, params=params)
                 return response
             except (requests.RequestException, QQBotAPIError):
                 if attempt == 2:
@@ -292,7 +262,7 @@ class QQBotHttp():
             'group_id': group_id,
             'message': message
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def get_msg(self,message_id):
         """获取消息。
@@ -323,7 +293,7 @@ class QQBotHttp():
         params = {
             'message_id': message_id
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
         
     def delete_msg(self,message_id):
         """撤回消息。
@@ -343,7 +313,7 @@ class QQBotHttp():
         params = {
             'message_id': message_id
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
         
     def mark_msg_as_read(self,message_id):
         """标记消息已读。
@@ -363,7 +333,7 @@ class QQBotHttp():
         params = {
             'message_id': message_id
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
         
     def get_forward_msg(self,message_id):
         """获取合并转发消息。
@@ -389,7 +359,7 @@ class QQBotHttp():
         params = {
             'message_id': message_id
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
         
     def send_group_forward_msg(self, group_id, messages):
         """发送群合并转发消息。
@@ -405,7 +375,7 @@ class QQBotHttp():
 
         异常:
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出 
-            RequestException: 当网络请求失败或返回非ok状态时抛出
+            RequestException: 当网络请求失败时抛出
         """
         self.logger.info("Sending group forward message to group %s", group_id)
         url = self._url + "/send_group_forward_msg"
@@ -413,7 +383,7 @@ class QQBotHttp():
             'group_id': group_id,
             'messages': messages
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
         
     def send_private_forward_msg(self,user_id,messages):
         """发送私聊合并转发消息。
@@ -436,10 +406,10 @@ class QQBotHttp():
         params = {
             'user_id': user_id,
             'messages': messages
-        }
-        return self._make_request('GET', url, params=params)
+            }
+        return self._make_request('POST', url, params=params)
         
-    def get_group_msg_history(self):
+    def get_group_msg_history(self,message_seq,group_id):
         """获取群消息历史记录。
 
         参数:
@@ -456,7 +426,11 @@ class QQBotHttp():
         """
         self.logger.debug("Getting group message history")
         url = self._url + "/get_group_msg_history"
-        return self._make_request('GET', url)
+        params = {
+            'message_seq': message_seq,
+            'group_id': group_id
+        }
+        return self._make_request('POST', url, params=params)
     
     #图片
     def get_image(self,file):
@@ -480,7 +454,7 @@ class QQBotHttp():
         params = {
             'file': file
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
         
     def ocr_image(self,image_id):
         """使用OCR识别图片中的文字。
@@ -505,7 +479,7 @@ class QQBotHttp():
         params = {
             'image': image_id
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
     
     #语音
     def get_record(self,file,out_format):
@@ -529,7 +503,7 @@ class QQBotHttp():
             'file': file,
             'out_format': out_format
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
         
     def can_send_record(self):
         """查询是否可以发送语音消息。
@@ -543,7 +517,7 @@ class QQBotHttp():
         """
         self.logger.debug("Checking if can send record")
         url = self._url + "/can_send_record"
-        return self._make_request('GET', url)
+        return self._make_request('POST', url)
     
     #文件
     def upload_group_file(self,group_id,file_path,file_name,folder):
@@ -571,7 +545,7 @@ class QQBotHttp():
                 'name': file_name,
                 'folder': folder
             }
-            return self._make_request('GET', url, params=params)
+            return self._make_request('POST', url, params=params)
             
     def delete_group_file(self, group_id, file_id, busid):
         """删除群文件。
@@ -595,7 +569,7 @@ class QQBotHttp():
             'file_id': file_id,
             'busid': busid
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
     
     def create_group_file_folder(self, group_id, name, parent_id='/'):
         """创建群文件文件夹。
@@ -619,7 +593,7 @@ class QQBotHttp():
             'name': name,
             'parent_id': parent_id  
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def delete_group_folder(self, group_id, folder_id):
         """删除群文件文件夹。
@@ -641,7 +615,7 @@ class QQBotHttp():
             'group_id': group_id,
             'folder_id': folder_id
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def get_group_file_system_info(self, group_id):
         """获取群文件系统信息。
@@ -665,7 +639,7 @@ class QQBotHttp():
         params = {
             'group_id': group_id
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def get_group_root_files(self, group_id):
         """获取群根目录文件列表。
@@ -687,7 +661,7 @@ class QQBotHttp():
         params = {
             'group_id': group_id
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def get_group_files_by_folder(self, group_id, folder_id):
         """获取群子目录文件列表。
@@ -711,7 +685,7 @@ class QQBotHttp():
             'group_id': group_id,
             'folder_id': folder_id
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def get_group_file_url(self, group_id, file_id, busid):
         """获取群文件资源链接。
@@ -735,7 +709,7 @@ class QQBotHttp():
             'file_id': file_id,
             'busid': busid
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def upload_private_file(self, user_id, file, name):
         """上传私聊文件。
@@ -759,7 +733,7 @@ class QQBotHttp():
             'file': file,
             'name': name
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
     
     #处理请求
     def set_friend_add_request(self, flag, approve=True, remark=''):
@@ -784,7 +758,7 @@ class QQBotHttp():
             'approve': approve,
             'remark': remark
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def set_group_add_request(self, flag, sub_type, approve=True, reason=''):
         """处理加群请求/邀请。
@@ -810,7 +784,7 @@ class QQBotHttp():
             'approve': approve,
             'reason': reason
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     # 群信息
     def get_group_info(self, group_id, no_cache=False):
@@ -840,7 +814,7 @@ class QQBotHttp():
             'group_id': group_id,
             'no_cache': no_cache
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def get_group_list(self, no_cache=False):
         """获取群列表。
@@ -860,7 +834,7 @@ class QQBotHttp():
         params = {
             'no_cache': no_cache
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def get_group_member_info(self,group_id,no_cache=False):
         """获取群成员信息。
@@ -882,7 +856,7 @@ class QQBotHttp():
             'group_id': group_id,
             'no_cache': no_cache
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def get_group_member_list(self, group_id, no_cache=False):
         """获取群成员列表。
@@ -904,7 +878,7 @@ class QQBotHttp():
             'group_id': group_id,
             'no_cache': no_cache
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def get_group_honor_info(self, group_id, type='all'):
         """获取群荣誉信息。
@@ -939,7 +913,7 @@ class QQBotHttp():
             'group_id': group_id,
             'type': type
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def get_group_system_msg(self):
         """获取群系统消息。
@@ -955,7 +929,7 @@ class QQBotHttp():
         """
         self.logger.debug("Getting group system messages")
         url = self._url + "/get_group_system_msg"
-        return self._make_request('GET', url)
+        return self._make_request('POST', url)
 
     def get_essence_msg_list(self, group_id):
         """获取精华消息列表。
@@ -980,7 +954,7 @@ class QQBotHttp():
         self.logger.debug(f"Getting essence messages for group {group_id}")
         url = self._url + "/get_essence_msg_list"
         params = {'group_id': group_id}
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def get_group_at_all_remain(self, group_id):
         """获取群 @全体成员 剩余次数。
@@ -1001,7 +975,7 @@ class QQBotHttp():
         self.logger.debug(f"Getting @all remaining count for group {group_id}")
         url = self._url + "/get_group_at_all_remain"
         params = {'group_id': group_id}
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     # 群设置
     def set_group_name(self, group_id, group_name):
@@ -1024,7 +998,7 @@ class QQBotHttp():
             'group_id': group_id,
             'group_name': group_name
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def set_group_admin(self, group_id, user_id, enable=True):
         """设置群管理员。
@@ -1049,7 +1023,7 @@ class QQBotHttp():
             'user_id': user_id,
             'enable': enable
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def set_group_portrait(self, group_id, file, cache=1):
         """设置群头像。
@@ -1073,7 +1047,7 @@ class QQBotHttp():
             'file': file,
             'cache': cache
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def set_group_card(self, group_id, user_id, card=''):
         """设置群名片(群备注)。
@@ -1097,7 +1071,7 @@ class QQBotHttp():
             'user_id': user_id,
             'card': card
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def set_group_special_title(self, group_id, user_id, special_title='', duration=-1):
         """设置群组专属头衔。
@@ -1123,7 +1097,7 @@ class QQBotHttp():
             'special_title': special_title,
             'duration': duration
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     # 群操作
     def set_group_ban(self, group_id, user_id, duration=1800):
@@ -1149,7 +1123,7 @@ class QQBotHttp():
             'user_id': user_id, 
             'duration': duration
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def set_group_whole_ban(self, group_id, user_id, duration=1800):
         """群成员单人禁言。
@@ -1174,7 +1148,7 @@ class QQBotHttp():
             'user_id': user_id,
             'duration': duration
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def set_group_anonymous_ban(self, group_id, anonymous=None, anonymous_flag=None, duration=1800):
         """群匿名用户禁言。
@@ -1204,7 +1178,7 @@ class QQBotHttp():
         if anonymous_flag:
             params['anonymous_flag'] = anonymous_flag
 
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def set_group_kick(self, group_id, user_id, reject_add_request=False):
         """群组踢人。
@@ -1228,7 +1202,7 @@ class QQBotHttp():
             'user_id': user_id,
             'reject_add_request': reject_add_request
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     def set_group_leave(self, group_id, is_dismiss=False):
         """退出群组。
@@ -1250,7 +1224,7 @@ class QQBotHttp():
             'group_id': group_id,
             'is_dismiss': is_dismiss
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
         
         def set_group_whole_ban(self, group_id, enable=True):
             """群全员禁言。
@@ -1273,7 +1247,7 @@ class QQBotHttp():
                 'group_id': group_id,
                 'enable': enable
             }
-            return self._make_request('GET', url, params=params)
+            return self._make_request('POST', url, params=params)
     
     def set_group_anonymous(self, group_id, enable=True):
         """群匿名聊天。
@@ -1296,7 +1270,7 @@ class QQBotHttp():
             'group_id': group_id,
             'enable': enable
         }
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
     
     def set_group_essence_msg(self, message_id):
         """设置群精华消息。
@@ -1314,7 +1288,7 @@ class QQBotHttp():
         self.logger.info("Setting essence message %s", message_id)
         url = self._url + "/set_essence_msg"
         params = {'message_id': message_id}
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
     
     def delete_group_essence_msg(self, message_id):
         """移出群精华消息。
@@ -1332,7 +1306,7 @@ class QQBotHttp():
         self.logger.info("Deleting essence message %s", message_id)
         url = self._url + "/delete_essence_msg"
         params = {'message_id': message_id}
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
     
     def send_group_sign(self, group_id):
         """群打卡。
@@ -1350,7 +1324,7 @@ class QQBotHttp():
         self.logger.info("Sending group sign for group %s", group_id)
         url = self._url + "/send_group_sign"
         params = {'group_id': group_id}
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
     
     def set_group_anonymous_ban(self, group_id, anonymous_flag=None, anonymous=None, duration=1800):
         """群匿名用户禁言。
@@ -1378,7 +1352,7 @@ class QQBotHttp():
             params['anonymous_flag'] = anonymous_flag
         if anonymous:
             params['anonymous'] = anonymous
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
     
     def send_group_notice(self, group_id, content, image=None):
         """发送群公告。
@@ -1404,7 +1378,7 @@ class QQBotHttp():
         if image:
             params['image'] = image
             
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
         
     def get_group_notice(self, group_id):
         """获取群公告。
@@ -1430,7 +1404,7 @@ class QQBotHttp():
         self.logger.debug("Getting notices for group %s", group_id)
         url = self._url + "/get_group_notice"
         params = {'group_id': group_id}
-        return self._make_request('GET', url, params=params)
+        return self._make_request('POST', url, params=params)
 
     # 扩展API
     def set_qq_avatar(self, file: str) -> dict:
@@ -1453,7 +1427,7 @@ class QQBotHttp():
             list: 包含被过滤的加群请求信息
         """
         url = self._url + "/get_group_ignore_add_request"
-        return self._make_request('GET', url)
+        return self._make_request('POST', url)
     
     def get_file(self, file_id: str, base64: bool = False) -> dict:
         """下载收到的群文件或私聊文件
@@ -1521,7 +1495,7 @@ class QQBotHttp():
             list: 好友分组信息列表
         """
         url = self._url + "/get_friends_with_category"
-        return self._make_request('GET', url)
+        return self._make_request('POST', url)
     
     def set_online_status(self, status: int, ext_status: int = 0, battery_status: int = 0) -> dict:
         """设置在线状态
@@ -1542,7 +1516,7 @@ class QQBotHttp():
     def get_profile_like(self) -> dict:
         """获取自身点赞列表"""
         url = self._url + "/get_profile_like"
-        return self._make_request('GET', url)
+        return self._make_request('POST', url)
     
     def friend_poke(self, user_id: int) -> dict:
         """好友戳一戳
