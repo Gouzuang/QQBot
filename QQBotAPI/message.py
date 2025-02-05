@@ -1,40 +1,10 @@
 from functools import lru_cache
 from .data import QQ_FACE_DISCRIPTION 
-
-class Person():
-    def __init__(self, user_id, nickname='',card=''):
-        self._user_id = user_id
-        self._nickname = nickname
-        self._card = card
-        
-    def user_id(self):
-        return self._user_id
-    def nickname(self):
-        return self._nickname
-    def card(self):
-        return self._card
-    
-    def __str__(self):
-        str = ""
-        str += f"{self.nickname()}"
-        if self._card != "":
-            str += f"({self.card()})"
-        return str
+from .person import Person
 
 class MessageChain():
-    def __init__(self, raw_data):
-        self._raw_data = raw_data
-        self._self_id = raw_data["self_id"]
-        self._time = raw_data["time"]
-        self._message_type = raw_data["message_type"]
-        self._message_id = raw_data["message_id"]
-        self._message_seq = raw_data["message_seq"]
-        
-        self._sender = Person(raw_data["sender"]["user_id"], raw_data["sender"]["nickname"], raw_data["sender"]["card"])
-        
-        self._message = []
-        for msg in raw_data["message"]:
-            self._message.append(self.format_message(msg))
+    def __init__(self):
+        pass
         
     def format_message(self,msg):
         if msg["type"] == "Text":
@@ -52,18 +22,100 @@ class MessageChain():
         elif msg["type"] == "Json":
             return JsonMessage(msg["data"]["json"])
         
+    
+class ReceivedMessageChain(MessageChain):
+    def __init__(self,raw_data):
+        self._raw_data = raw_data
+        self._self_id = raw_data["self_id"]
+        self._time = raw_data["time"]
+        self._message_type = raw_data["message_type"]
+        self._message_id = raw_data["message_id"]
+        self._message_seq = raw_data["message_seq"]
+        
+        self._sender = Person(raw_data["sender"]["user_id"], raw_data["sender"]["nickname"], raw_data["sender"]["card"])
+        
+        self._message = []
+        for msg in raw_data["message"]:
+            self._message.append(self.format_message(msg))
+            
+    def sender(self):
+        return self._sender
+        
     def __str__(self):
         str = f"{self._sender}:\n"
         for msg in self._message:
             str += f"{msg}"
         return str
+    
+    def reply(self,message):
+        """回复消息"""
+        return SentMessageChain.reply_to(self)
+    
+class SentMessageChain(MessageChain):
+    def __init__(self):
+        self._message = []
         
+    def add_message(self,message):
+        if isinstance(message, ReplyFlag):
+            if any(isinstance(msg, ReplyFlag) for msg in self._message):
+                raise ValueError("Cannot add multiple ReplyFlag messages in single message")
+        self._message.append(message)
+        
+    def json(self):
+        messages = []
+        for msg in self._message:
+            messages.append(msg.json())
+        return messages
+    
+    @classmethod
+    def convert_from_received(cls, received_message):
+        """将ReceivedMessageChain的消息内容复制给SentMessageChain"""
+        sent_message = cls()
+        for msg in received_message._message:
+            sent_message.add_message(msg)
+        return sent_message
+    
+    @classmethod
+    def reply_to(cls, received_message):
+        """创建一个回复消息"""
+        sent_message = cls()
+        sent_message.add_message(ReplyFlag(received_message))
+        return sent_message
+
+class ReplyFlag():
+    def __init__(self,message):
+        if isinstance(message, int):
+            self._message_id = message
+            self._raw_data = None
+        elif isinstance(message, MessageChain):
+            self._message_id = message._message_id
+            self._raw_data = MessageChain
+        else:
+            raise TypeError("message must be int or MessageChain")
+        
+    def __str__(self):
+        if self._raw_data:
+            return f"Reply to {self._raw_data} sent by {self._raw_data.sender()}:"
+        
+    def json(self):
+        return {
+            "reply": self._message_id
+        }
+
 class TextMessage():
     def __init__(self, text):
         self._text = text
         
     def __str__(self):
         return self._text
+    
+    def json(self):
+        return {
+            "type": "text",
+            "data": {
+                "text": self._text
+            }
+        }
     
 class ImageMessage():
     def __init__(self, url,name,file_size):
@@ -73,6 +125,16 @@ class ImageMessage():
         
     def __str__(self):
         return self._name
+    
+    def json(self):
+        return {
+            "type": "image",
+            "data": {
+                "url": self._url,
+                "name": self._name,
+                "file_size": self._file_size
+            }
+        }
     
 class BuildInFaceMessage():
     def __init__(self, face_id):
