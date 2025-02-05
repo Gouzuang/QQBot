@@ -1,6 +1,6 @@
 from functools import lru_cache
 from .data import QQ_FACE_DISCRIPTION 
-from .person import Person
+from .person import Person, Group
 
 class MessageChain():
     def __init__(self):
@@ -31,6 +31,12 @@ class ReceivedMessageChain(MessageChain):
         self._message_type = raw_data["message_type"]
         self._message_id = raw_data["message_id"]
         self._message_seq = raw_data["message_seq"]
+        if "group_id" in raw_data:
+            self._group = Group(raw_data["group_id"], raw_data["group_name"], raw_data["group_card"])
+            self.is_group = True
+        else:
+            self._group = None
+            self.is_group = False
         
         self._sender = Person(raw_data["sender"]["user_id"], raw_data["sender"]["nickname"], raw_data["sender"]["card"])
         
@@ -40,6 +46,12 @@ class ReceivedMessageChain(MessageChain):
             
     def sender(self):
         return self._sender
+    
+    def group(self):
+        if self.is_group:
+            return self._group
+        else:
+            return None
         
     def __str__(self):
         str = f"{self._sender}:\n"
@@ -47,19 +59,24 @@ class ReceivedMessageChain(MessageChain):
             str += f"{msg}"
         return str
     
+    def reply_chain(self,message):
+        """回复消息"""
+        return ReplyMessageChain(message)
+    
     def reply(self,message):
         """回复消息"""
-        return SentMessageChain.reply_to(self)
+        reply_chain = self.reply_chain(message)
+        reply_chain.send()
     
 class SentMessageChain(MessageChain):
     def __init__(self):
-        self._message = []
+        self.message = []
         
     def add_message(self,message):
         if isinstance(message, ReplyFlag):
             if any(isinstance(msg, ReplyFlag) for msg in self._message):
                 raise ValueError("Cannot add multiple ReplyFlag messages in single message")
-        self._message.append(message)
+        self.message.append(message)
         
     def json(self):
         messages = []
@@ -75,12 +92,22 @@ class SentMessageChain(MessageChain):
             sent_message.add_message(msg)
         return sent_message
     
-    @classmethod
-    def reply_to(cls, received_message):
-        """创建一个回复消息"""
-        sent_message = cls()
-        sent_message.add_message(ReplyFlag(received_message))
-        return sent_message
+class ReplyMessageChain(SentMessageChain):
+    def __init__(self, reply_message):
+        self._reply_message = reply_message
+        if reply_message.is_group:
+            self._is_group = True
+            self._group = reply_message._group
+        else:
+            self._is_group = False
+            self._group = None
+        self._sender = reply_message._sender
+        
+    def send(self):
+        if self._is_group:
+            self.qqbot.send_group_message(self._group, self)
+        else:
+            self.qqbot.send_private_message(self._sender, self)
 
 class ReplyFlag():
     def __init__(self,message):

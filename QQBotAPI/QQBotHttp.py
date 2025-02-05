@@ -1,9 +1,10 @@
 import time
+from typing import Union
 import requests
 import logging
 import os
 from logging.handlers import RotatingFileHandler
-from QQBotAPI import QQBotAPIError
+from .errors import QQBotAPIError
 from requests.exceptions import RequestException
 
 class QQBotHttp():
