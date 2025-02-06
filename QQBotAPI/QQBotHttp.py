@@ -43,7 +43,7 @@ class QQBotHttp():
                     response = requests.get(url, params=params).json()
                     
                 if response.get('status') == 'ok':
-                    self.logger.debug(f"API '{url}' request successful: {response}")
+                    self.logger.debug(f"API '{url}' request successful: {json.dumps(response, indent=4, ensure_ascii=False)}")
                     return response.get('data')
                 raise QQBotAPIError("API request failed", response)
             except (requests.RequestException, QQBotAPIError) as e:
@@ -222,7 +222,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Sending private message to user %s via group %s", user_id, group_id)
+        self.logger.info("Sending private message to user %s via get_group %s", user_id, group_id)
         url = self._url + "/send_private_msg"
         params = {
             'user_id': user_id,
@@ -256,7 +256,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Sending group message %s to group %s",message, group_id)
+        self.logger.info("Sending get_group message %s to get_group %s",message, group_id)
         url = self._url + "/send_group_msg"
         params = {
             'group_id': group_id,
@@ -272,11 +272,11 @@ class QQBotHttp():
             
         返回:
             dict: 包含以下字段:
-            - group (bool): 是否是群消息
+            - get_group (bool): 是否是群消息
             - group_id (int64): 群号(仅群消息)
             - message_id (int32): 消息id
             - real_id (int32): 消息真实id
-            - message_type (str): 消息类型('group'或'private')
+            - message_type (str): 消息类型('get_group'或'private')
             - sender (dict): 发送者信息
                 - nickname (str): 发送者昵称
                 - user_id (int64): 发送者QQ号
@@ -377,7 +377,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出 
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Sending group forward message to group %s", group_id)
+        self.logger.info("Sending get_group forward message to get_group %s", group_id)
         url = self._url + "/send_group_forward_msg"
         params = {
             'group_id': group_id,
@@ -424,7 +424,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug("Getting group message history")
+        self.logger.debug("Getting get_group message history")
         url = self._url + "/get_group_msg_history"
         params = {
             'message_seq': message_seq,
@@ -537,7 +537,7 @@ class QQBotHttp():
                 QQBotAPIError: 当API请求失败或返回非ok状态时抛出
                 RequestException: 当网络请求失败时抛出
             """
-            self.logger.info("Uploading file %s to group %s", file_name, group_id)
+            self.logger.info("Uploading file %s to get_group %s", file_name, group_id)
             url = self._url + "/upload_group_file"
             params = {
                 'group_id': group_id,
@@ -562,7 +562,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Deleting file %s from group %s", file_id, group_id)
+        self.logger.info("Deleting file %s from get_group %s", file_id, group_id)
         url = self._url + "/delete_group_file"
         params = {
             'group_id': group_id,
@@ -586,7 +586,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Creating group folder %s in group %s", name, group_id)
+        self.logger.info("Creating get_group folder %s in get_group %s", name, group_id)
         url = self._url + "/create_group_file_folder"
         params = {
             'group_id': group_id,
@@ -609,7 +609,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Deleting group folder %s from group %s", folder_id, group_id)
+        self.logger.info("Deleting get_group folder %s from get_group %s", folder_id, group_id)
         url = self._url + "/delete_group_folder"
         params = {
             'group_id': group_id,
@@ -634,7 +634,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug("Getting group file system info for group %s", group_id)
+        self.logger.debug("Getting get_group file system info for get_group %s", group_id)
         url = self._url + "/get_group_file_system_info"
         params = {
             'group_id': group_id
@@ -656,7 +656,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug("Getting group root files for group %s", group_id)
+        self.logger.debug("Getting get_group root files for get_group %s", group_id)
         url = self._url + "/get_group_root_files"
         params = {
             'group_id': group_id
@@ -679,7 +679,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug("Getting files in folder %s for group %s", folder_id, group_id)
+        self.logger.debug("Getting files in folder %s for get_group %s", folder_id, group_id)
         url = self._url + "/get_group_files_by_folder"
         params = {
             'group_id': group_id,
@@ -702,7 +702,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug("Getting download URL for file %s in group %s", file_id, group_id)
+        self.logger.debug("Getting download URL for file %s in get_group %s", file_id, group_id)
         url = self._url + "/get_group_file_url"
         params = {
             'group_id': group_id,
@@ -776,7 +776,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Processing group request with flag: %s", flag)
+        self.logger.info("Processing get_group request with flag: %s", flag)
         url = self._url + "/set_group_add_request" 
         params = {
             'flag': flag,
@@ -808,7 +808,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug("Getting info for group %s", group_id)
+        self.logger.debug("Getting info for get_group %s", group_id)
         url = self._url + "/get_group_info"
         params = {
             'group_id': group_id,
@@ -829,7 +829,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug("Getting group list")
+        self.logger.debug("Getting get_group list")
         url = self._url + "/get_group_list"
         params = {
             'no_cache': no_cache
@@ -850,7 +850,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug("Getting member info for group %s", group_id)
+        self.logger.debug("Getting member info for get_group %s", group_id)
         url = self._url + "/get_group_member_info"
         params = {
             'group_id': group_id,
@@ -872,7 +872,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug("Getting member list for group %s", group_id)
+        self.logger.debug("Getting member list for get_group %s", group_id)
         url = self._url + "/get_group_member_list"
         params = {
             'group_id': group_id,
@@ -907,7 +907,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug(f"Getting honor info for group {group_id}, type {type}")
+        self.logger.debug(f"Getting honor info for get_group {group_id}, type {type}")
         url = self._url + "/get_group_honor_info"
         params = {
             'group_id': group_id,
@@ -927,7 +927,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug("Getting group system messages")
+        self.logger.debug("Getting get_group system messages")
         url = self._url + "/get_group_system_msg"
         return self._make_request('POST', url)
 
@@ -951,7 +951,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug(f"Getting essence messages for group {group_id}")
+        self.logger.debug(f"Getting essence messages for get_group {group_id}")
         url = self._url + "/get_essence_msg_list"
         params = {'group_id': group_id}
         return self._make_request('POST', url, params=params)
@@ -972,7 +972,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug(f"Getting @all remaining count for group {group_id}")
+        self.logger.debug(f"Getting @all remaining count for get_group {group_id}")
         url = self._url + "/get_group_at_all_remain"
         params = {'group_id': group_id}
         return self._make_request('POST', url, params=params)
@@ -992,7 +992,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Setting name for group %s to %s", group_id, group_name)
+        self.logger.info("Setting name for get_group %s to %s", group_id, group_name)
         url = self._url + "/set_group_name"
         params = {
             'group_id': group_id,
@@ -1015,7 +1015,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Setting admin status for user %s in group %s: %s", 
+        self.logger.info("Setting admin status for user %s in get_group %s: %s",
                       user_id, group_id, "enable" if enable else "disable")
         url = self._url + "/set_group_admin"
         params = {
@@ -1040,7 +1040,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Setting portrait for group %s", group_id)
+        self.logger.info("Setting portrait for get_group %s", group_id)
         url = self._url + "/set_group_portrait"
         params = {
             'group_id': group_id,
@@ -1064,7 +1064,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Setting card for user %s in group %s", user_id, group_id)
+        self.logger.info("Setting card for user %s in get_group %s", user_id, group_id)
         url = self._url + "/set_group_card"
         params = {
             'group_id': group_id,
@@ -1089,7 +1089,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Setting special title for user %s in group %s", user_id, group_id)
+        self.logger.info("Setting special title for user %s in get_group %s", user_id, group_id)
         url = self._url + "/set_group_special_title" 
         params = {
             'group_id': group_id,
@@ -1115,7 +1115,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Setting ban for user %s in group %s for %s seconds", 
+        self.logger.info("Setting ban for user %s in get_group %s for %s seconds",
                     user_id, group_id, duration)
         url = self._url + "/set_group_ban"
         params = {
@@ -1140,7 +1140,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Setting ban for user %s in group %s for %s seconds", 
+        self.logger.info("Setting ban for user %s in get_group %s for %s seconds",
                       user_id, group_id, duration)
         url = self._url + "/set_group_ban"
         params = {
@@ -1166,7 +1166,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Setting anonymous ban in group %s for %s seconds",
+        self.logger.info("Setting anonymous ban in get_group %s for %s seconds",
                         group_id, duration)
         url = self._url + "/set_group_anonymous_ban"
         params = {
@@ -1195,7 +1195,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Kicking user %s from group %s", user_id, group_id)
+        self.logger.info("Kicking user %s from get_group %s", user_id, group_id)
         url = self._url + "/set_group_kick"
         params = {
             'group_id': group_id,
@@ -1218,7 +1218,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出 
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Leaving group %s, dismiss: %s", group_id, is_dismiss)
+        self.logger.info("Leaving get_group %s, dismiss: %s", group_id, is_dismiss)
         url = self._url + "/set_group_leave"
         params = {
             'group_id': group_id,
@@ -1240,7 +1240,7 @@ class QQBotHttp():
                 QQBotAPIError: 当API请求失败或返回非ok状态时抛出
                 RequestException: 当网络请求失败时抛出
             """
-            self.logger.info("Setting whole group ban for group %s: %s", 
+            self.logger.info("Setting whole get_group ban for get_group %s: %s",
                             group_id, "enable" if enable else "disable")
             url = self._url + "/set_group_whole_ban"
             params = {
@@ -1263,7 +1263,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Setting anonymous chat for group %s: %s", 
+        self.logger.info("Setting anonymous chat for get_group %s: %s",
                         group_id, "enable" if enable else "disable")
         url = self._url + "/set_group_anonymous"
         params = {
@@ -1321,7 +1321,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Sending group sign for group %s", group_id)
+        self.logger.info("Sending get_group sign for get_group %s", group_id)
         url = self._url + "/send_group_sign"
         params = {'group_id': group_id}
         return self._make_request('POST', url, params=params)
@@ -1342,7 +1342,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Setting anonymous ban in group %s", group_id)
+        self.logger.info("Setting anonymous ban in get_group %s", group_id)
         url = self._url + "/set_group_anonymous_ban"
         params = {
             'group_id': group_id,
@@ -1369,7 +1369,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Sending group notice to group %s", group_id)
+        self.logger.info("Sending get_group notice to get_group %s", group_id)
         url = self._url + "/send_group_notice"
         params = {
             'group_id': group_id,
@@ -1401,7 +1401,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.debug("Getting notices for group %s", group_id)
+        self.logger.debug("Getting notices for get_group %s", group_id)
         url = self._url + "/get_group_notice"
         params = {'group_id': group_id}
         return self._make_request('POST', url, params=params)

@@ -1,8 +1,11 @@
 from functools import lru_cache
+import json
 from typing import Union
 from .data import QQ_FACE_DISCRIPTION 
 from .person import Person, Group
-
+import os
+import requests
+from .config import CachePath
 class MessageChain():
     def __init__(self):
         pass
@@ -17,15 +20,35 @@ class MessageChain():
         elif msg["type"] == "at":
             return AtMessage(msg["data"]["qq"])
         elif msg["type"] == "file":
-            return FileMessage(msg["data"]["url"], msg["data"]["name"], msg["data"]["file_size"], msg["data"]["file_id"], msg["data"]["path"])
+            return FileMessage(msg["data"]["url"], msg["data"]["file"], msg["data"]["file_size"], msg["data"]["file_id"], msg["data"]["path"])
         elif msg["type"] == "voice":
             return VoiceMessage(msg["data"]["url"], msg["data"]["file_name"], msg["data"]["file_size"], msg["data"]["path"])
         elif msg["type"] == "json":
-            return JsonMessage(msg["data"]["json"])
+            return JsonMessage(msg["data"])
         elif msg["type"] == "reply":
             self.is_reply = True
             self.reply_info = int(msg["data"]["id"])
             return ReplyFlag(msg["data"]["id"])
+        
+    def format_message_from_db(self,msg):
+        if msg["type"] == "text":
+            return TextMessage.json_from_db(msg)
+        elif msg["type"] == "image":
+            return ImageMessage.json_from_db(msg)
+        elif msg["type"] == "face":
+            return BuildInFaceMessage(msg["data"]["id"])
+        elif msg["type"] == "at":
+            return AtMessage.json_from_db(msg)
+        elif msg["type"] == "file":
+            return FileMessage.json_from_db(msg)
+        elif msg["type"] == "voice":
+            return VoiceMessage.json_from_db(msg)
+        elif msg["type"] == "json":
+            return JsonMessage.json_from_db(msg)
+        elif msg["type"] == "reply":
+            self.is_reply = True
+            self.reply_info = int(msg["data"]["id"])
+            return ReplyFlag.json_from_db(msg)
         
 class ReceivedMessageChain(MessageChain):
     def __init__(self,raw_data):
@@ -49,19 +72,19 @@ class ReceivedMessageChain(MessageChain):
         for msg in raw_data["message"]:
             self.message.append(self.format_message(msg))
             
-    def sender(self):
+    def get_sender(self):
         return self._sender
     
     def get_message_id(self):
         return self._message_id
     
-    def time(self):
+    def get_time(self):
         return self._time
     
-    def message_id(self):
+    def get_message_id(self):
         return self._message_id
     
-    def group(self):
+    def get_group(self) -> Group:
         if self.is_group:
             return self._group
         else:
@@ -73,8 +96,28 @@ class ReceivedMessageChain(MessageChain):
             str += f"{msg}"
         return str
     
-    def json(self):
-        return self._raw_data
+    def get_json(self) -> dict:
+        return json.dumps(self._raw_data)
+    
+    def get_json_for_db(self) -> dict:
+        return {
+            "self_id": self._self_id,
+            "time": self._time,
+            "message_type": self._message_type,
+            "message_id": self._message_id,
+            "message_seq": self._message_seq,
+            "group_id": self._group.get_group_id() if self.is_group else None,
+            "sender": self._sender.get_json(),
+            "message": [msg.get_json_for_db() for msg in self.message]
+        }
+    
+    @classmethod
+    def json_from_db(self,json:Union[dict,str]):
+        if isinstance(json, str):
+            json = json.loads(json)
+        ret = ReceivedMessageChain(json)
+        ret.message = [ret.format_message_from_db(msg) for msg in json["message"]]
+        return ret
     
     def text_only(self):
         return "".join([str(msg) for msg in self.message if isinstance(msg, TextMessage)])
@@ -107,10 +150,10 @@ class SentMessageChain(MessageChain):
                 raise ValueError("Cannot add multiple ReplyFlag messages in single message")
         self.message.append(message)
         
-    def json(self):
+    def get_json(self) -> dict:
         messages = []
         for msg in self.message:
-            messages.append(msg.json())
+            messages.append(msg.get_json())
         return messages
     
     @classmethod
@@ -157,9 +200,19 @@ class ReplyFlag():
         if self._raw_data:
             return f"Reply to {self._raw_data} sent by {self._raw_data.sender()}:"
         
-    def json(self):
+    def get_json(self):
         return {'type': 'reply', 'data': {'id': self._message_id}}
 
+    def get_json_for_db(self):
+        return {'type': 'reply', 'data': {'id': self._message_id}}
+    
+    @classmethod
+    def json_from_db(self,json:Union[dict,str]):
+        if isinstance(json, str):
+            json = json.loads(json)
+        data = json.get("data")
+        return ReplyFlag(data.get("id"))
+    
 class TextMessage():
     def __init__(self, text):
         self._text = text
@@ -167,7 +220,7 @@ class TextMessage():
     def __str__(self):
         return self._text
     
-    def json(self):
+    def get_json(self):
         return {
             "type": "text",
             "data": {
@@ -175,25 +228,80 @@ class TextMessage():
             }
         }
     
+    def get_json_for_db(self):
+        return {
+            "type": "text",
+            "data": {
+                "text": self._text
+            }
+        }
+    
+    @classmethod
+    def json_from_db(self,json:Union[dict,str]):
+        if isinstance(json, str):
+            json = json.loads(json)
+        data = json.get("data")
+        return TextMessage(data.get("text"))
+    
 class ImageMessage():
     def __init__(self, url,name,file_size):
         self._url = url
         self._name = name
         self._file_size = file_size
+        self._is_downloaded = False
+        self._path = None
         
     def __str__(self):
-        return self._name
+        return self.name
     
-    def json(self):
+    def get_json(self):
         return {
             "type": "image",
             "data": {
                 "url": self._url,
-                "name": self._name,
+                "file": self._name,
                 "file_size": self._file_size
             }
         }
-    
+        
+    def get_json_for_db(self):
+        return {
+            "type": "image",
+            "data": {
+                "url": self._url,
+                "file": self._name,
+                "file_size": self._file_size,
+            },
+            "bot": {
+                "path": self._path
+            }
+        }
+        
+    @classmethod
+    def json_from_db(self,json:Union[dict,str]):
+        if isinstance(json, str):
+            json = json.loads(json)
+        data = json.get("data")
+        message = ImageMessage(data.get("url"), data.get("file"), data.get("file_size"))
+        data = json.get("bot")
+        message._path = data.get("path")
+        message._is_downloaded = True
+        return message
+         
+    def download(self):
+        file_path = os.path.join(CachePath.image_path(), self._name)
+        
+        response = requests.get(self._url)
+        response.raise_for_status()
+        
+        with open(file_path, 'wb') as f:
+            f.write(response.content)
+            
+        self._is_downloaded = True
+        self._path = file_path
+            
+        return file_path
+   
 class BuildInFaceMessage():
     def __init__(self, face_id):
         self._face_id = int(face_id)
@@ -205,24 +313,68 @@ class BuildInFaceMessage():
     def __str__(self):
         return f"[表情:{self._description}]"
     
-class AtMessage():
-    def __init__(self, target):
-        self.target = target
-        
-    def __str__(self):
-        return self.target
-    
-    def __eq__(self, value):
-        return self.target == value
-
-    def json(self):
+    def get_json(self):
         return {
-            "type": "at",
+            "type": "face",
             "data": {
-                "qq": self.target
+                "id": self._face_id
             }
         }
     
+    def get_json_for_db(self):
+        return {
+            "type": "face",
+            "data": {
+                "id": self._face_id
+            }
+        }
+        
+class AtMessage():
+    def __init__(self, target:Union[str,int,Person]):
+        if isinstance(target, Person):
+            self._target = target.user_id()
+        elif isinstance(target, str):
+            self._target = target
+        elif isinstance(target, int):
+            self._target = target
+        
+    def __str__(self):
+        return self._target
+    
+    def __eq__(self, value:Union[str,int,Person]):
+        if isinstance(value, Person):
+            return self._target == value.user_id()
+        elif isinstance(value, str):
+            return self._target == value
+        elif isinstance(value, int):
+            return self._target == str(value)
+
+    def get_json(self):
+        return {
+            "type": "at",
+            "data": {
+                "qq": self._target
+            }
+        }
+    
+    def get_target(self):
+        return self._target
+    
+    def get_json_for_db(self):
+        return {
+            "type": "at",
+            "data": {
+                "qq": self._target
+            }
+        }
+    
+    @classmethod
+    def json_from_db(self,json:Union[dict,str]):
+        if isinstance(json, str):
+            json = json.loads(json)
+        data = json.get("data")
+        return AtMessage(data.get("qq"))
+
 class FileMessage():
     def __init__(self, url,name,file_size,file_id,path):
         self._url = url
@@ -234,6 +386,54 @@ class FileMessage():
     def __str__(self):
         return self._name
     
+    def get_url(self):
+        return self._url
+    def get_name(self):
+        return self._name
+    def get_file_size(self):
+        return self._file_size
+    def get_file_id(self):
+        return self._file_id
+    def get_path(self):
+        return self._path
+    
+    def get_json(self):
+        return {
+            "type": "file",
+            "data": {
+                "url": self._url,
+                "file": self._name,
+                "file_size": self._file_size,
+                "file_id": self._file_id,
+                "path": self._path
+            }
+        }
+    
+    def get_json_for_db(self):
+        return {
+            "type": "file",
+            "data": {
+                "url": self._url,
+                "file": self._name,
+                "file_size": self._file_size,
+                "file_id": self._file_id,
+                "path":self._path
+            },
+            "bot": {
+                "path": self._path
+            }
+        }
+    
+    @classmethod
+    def json_from_db(self,json:Union[dict,str]):
+        if isinstance(json, str):
+            json = json.loads(json)
+        data = json.get("data")
+        message = FileMessage(data.get("url"), data.get("file"), data.get("file_size"), data.get("file_id"),data.get("path"))
+        data = json.get("bot")
+        message._path = data.get("path")
+        return message
+      
 class VoiceMessage():
     def __init__(self, url,file_name,file_size,path):
         self._url = url
@@ -244,9 +444,73 @@ class VoiceMessage():
     def __str__(self):
         return self._file_name
     
+    def get_url(self):
+        return self._url
+    def get_file_name(self):
+        return self._file_name
+    def get_file_size(self):
+        return self._file_size
+    def get_path(self):
+        return self._path
+    
+    def get_json(self):
+        return {
+            "type": "voice",
+            "data": {
+                "url": self._url,
+                "file_name": self._file_name,
+                "file_size": self._file_size,
+                "path": self._path
+            }
+        }
+    
+    def get_json_for_db(self):
+        return {
+            "type": "voice",
+            "data": {
+                "url": self._url,
+                "file_name": self._file_name,
+                "file_size": self._file_size
+            },
+            "bot": {
+                "path": self._path
+            }
+        }
+        
+    @classmethod
+    def json_from_db(self,json:Union[dict,str]):
+        if isinstance(json, str):
+            json = json.loads(json)
+        data = json.get("data")
+        message = VoiceMessage(data.get("url"), data.get("file_name"), data.get("file_size"))
+        data = json.get("bot")
+        message._path = data.get("path")
+        return message
+        
 class JsonMessage():
     def __init__(self, json):
         self._json = json
         
     def __str__(self):
         return self._json
+    
+    def get_json(self):
+        return {
+            "type": "json",
+            "data": self._json
+        }
+        
+    def get_json_for_db(self):
+        return {
+            "type": "json",
+            "data": self._json
+        }
+        
+    @classmethod
+    def json_from_db(self,json:Union[dict,str]):
+        if isinstance(json, str):
+            json = json.loads(json)
+        data = json.get("data")
+        return JsonMessage(data)
+    
+    

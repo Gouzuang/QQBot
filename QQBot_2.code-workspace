@@ -3,5 +3,15 @@
 		{
 			"path": "."
 		}
-	]
+	],
+	"settings": {
+		"files.exclude": {
+			"*.code-workspace": true,
+			"**/__pycache__": true,
+			"**/.idea": true,
+			"**/.pytest_cache": true,
+			"**/.venv": true,
+			"**/*.egg-info": true
+		}
+	}
 }

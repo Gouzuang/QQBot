@@ -9,3 +9,9 @@ class QQBotAPIError(Exception):
         super().__init__(message)
         self.response = response
         LogConfig().get_logger(__name__).error(f"{message} Response: {response}")
+        
+class DataNotFoundInDataBaseError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+        logger = LogConfig().get_logger("DataBase")
+        logger.error(message)

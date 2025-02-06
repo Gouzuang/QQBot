@@ -1,20 +1,20 @@
+import json
 import os
 import sqlalchemy
 from QQBotAPI.message import ReceivedMessageChain
 from QQBotAPI.person import Group, Person
 from shared.log import LogConfig
-
+from QQBotAPI.config import DataBasePath
+from QQBotAPI.errors import DataNotFoundInDataBaseError
 
 class MessageManager():
     def __init__(self,qq_id):
         self.logger = LogConfig().get_logger("MessageManager")
         
-        # 确保database目录存在
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))        
-        db_dir = os.path.join(base_dir, 'databases')
+        # Get database directory from config
+        db_dir = DataBasePath().db_path
         os.makedirs(db_dir, exist_ok=True)
-        
-        # 使用绝对路径
+        # Use absolute path with configured directory
         db_path = os.path.join(db_dir, f'{qq_id}.db')
         db_url = f'sqlite:///{db_path}'
         self.engine = sqlalchemy.create_engine(db_url)
@@ -38,20 +38,20 @@ class MessageManager():
         
     def add_message(self,message:ReceivedMessageChain):
         #插入消息
-        group_id = message.group()
+        group_id = message.get_group()
         if group_id:
-            group_id = group_id.group_id()
+            group_id = group_id.get_group_id()
         with self.engine.connect() as conn:
             conn.execute(self.message_table.insert().values(
-                message_id = message.message_id(),
-                time = message.time(),
+                message_id = message.get_message_id(),
+                time = message.get_time(),
                 group = group_id,
-                sender = message.sender().user_id(),
-                json = message.json()
+                sender = message.get_sender().get_user_id(),
+                json = message.get_json_for_db()
             ))
             conn.commit()
         
-        self.logger.debug(f"Message {message.message_id()} added to database")
+        self.logger.debug(f"Message {message.get_message_id()} added to database: {json.dumps(message.get_json_for_db(), indent=4, ensure_ascii=False)}")
         
     def get_message_via_id(self,message_id:int,group:Group = None, sender:Person = None) -> ReceivedMessageChain | None:
         #通过消息ID获取消息
@@ -62,12 +62,28 @@ class MessageManager():
             if sender:
                 query = query.where(self.message_table.c.sender == sender.user_id())
             result = conn.execute(query).fetchone()
-        self.logger.debug(f"Message {message_id} queried from database: {result}")
+        self.logger.debug(f"Message {message_id} queried from database: {json.dumps(result[4], indent=4, ensure_ascii=False)}")
         if result:
-            return ReceivedMessageChain(result[4])
+            return ReceivedMessageChain.json_from_db(result[4])
         else:
-            return None
+            raise DataNotFoundInDataBaseError(f"Message {message_id} not found in database")
         
     def __del__(self):
         if hasattr(self, 'engine'):
             self.engine.dispose()
+            self.logger.info("Database connection closed")
+            
+    def update_message(self,message:ReceivedMessageChain):
+        #更新消息
+        group_id = message.get_group()
+        if group_id:
+            group_id = group_id.get_group_id()
+        with self.engine.connect() as conn:
+            conn.execute(self.message_table.update().where(self.message_table.c.message_id == message.get_message_id()).values(
+                time = message.get_time(),
+                group = group_id,
+                sender = message.get_sender().get_user_id(),
+                json = message.get_json_for_db()
+            ))
+            conn.commit()
+        self.logger.debug(f"Message {message.get_message_id()} updated in database: {json.dumps(message.get_json_for_db(), indent=4, ensure_ascii=False)}")

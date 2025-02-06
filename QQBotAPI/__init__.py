@@ -60,12 +60,12 @@ class QQBot:
             message (List[message]): 消息内容
         """
         if isinstance(user, Person):
-            user_id = user.user_id()
+            user_id = user.get_user_id()
         else:
             user_id = user
         messages = []
         for msg in message:
-            messages.append(msg.json())
+            messages.append(msg.get_json())
         self.api.send_private_message(messages,user_id)
         
     def send_group_message(self,group,message):
@@ -76,10 +76,10 @@ class QQBot:
             message (List[message]): 消息内容
         """
         if isinstance(group, Group):
-            group_id = group.group_id()
+            group_id = group.get_group_id()
         else:
             group_id = group
         messages = []
         for msg in message:
-            messages.append(msg.json())
+            messages.append(msg.get_json())
         self.api.send_group_message(messages,group_id)

@@ -1,3 +1,4 @@
+import json
 import sys
 import traceback
 from fastapi import FastAPI, Request
@@ -12,7 +13,6 @@ import pkgutil
 from QQBotAPI.message import *
 import QQBotAPI
 from Resolver import Resolver
-from manager import StateManager
 from shared.log import LogConfig
 
 # 初始化日志配置
@@ -21,7 +21,6 @@ logger = log_config.get_logger(__name__)
 
 # 创建实例
 app = FastAPI()
-state_manager = StateManager()
 bot = QQBotAPI.QQBot("192.168.3.100:3000",1)
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -46,7 +45,7 @@ for _, name, _ in pkgutil.iter_modules(['apps']):
 async def submit(request: Request):
     try:
         message = await request.json()
-        logger.debug(f"Received data: {message}")
+        logger.debug(f"Received data: \n {json.dumps(message, indent=4, ensure_ascii=False)}")
         
         if message["post_type"] == "meta_event":
             if message["meta_event_type"] == "heartbeat":
@@ -62,30 +61,19 @@ async def submit(request: Request):
 def process_message(message):
     message_chain = ReceivedMessageChain(message)
     bot.MessageManager.add_message(message_chain)
-    """# 检查是否是对等待状态的响应
-    try:
-        if message_chain.is_reply:
-            callback_data = state_manager.get_callback(message_chain.reply_info)
-            if callback_data:
-                logger.info(f"message is a reply for a Resolver: {message}")
-                callback, data = callback_data
-                callback(message, data)
-                return
-    except Exception as e:
-        logger.info(f"message is not a reply for a Resolver: {message}")"""
             
     # 正常的消息处理流程
     logger.info(f"检测是否需要Resolver: {message_chain.get_message_id()}")
     resolver = None
     if message_chain.is_group:
         for msg in message_chain.message:
-            if isinstance(msg, AtMessage) and int(msg.target) == int(bot.qq_id):
-                resolver = Resolver(message_chain, bot, message_functions, state_manager)
+            if isinstance(msg, AtMessage) and msg == bot.qq_id:
+                resolver = Resolver(message_chain, bot, message_functions)
                 break
         if resolver == None:
             logger.info(f"Message {message_chain.get_message_id()} is not for me {bot.qq_id} in group")
     else:
-        resolver = Resolver(message_chain, bot, message_functions, state_manager)
+        resolver = Resolver(message_chain, bot, message_functions)
     
 
 # 运行应用
