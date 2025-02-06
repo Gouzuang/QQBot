@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import sys
 import traceback
@@ -13,11 +14,32 @@ import pkgutil
 from QQBotAPI.message import *
 import QQBotAPI
 from Resolver import Resolver
-from shared.log import LogConfig
 
+def setup_log_directory(self):
+        """设置日志目录和全局日志文件路径"""
+        self.log_dir = 'logs'
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
+            
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.log_file_path = os.path.join(self.log_dir, f'app_{timestamp}.log')
+        
+        # 配置根日志记录器
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        
+        file_handler = logging.FileHandler(self.log_file_path, encoding='utf-8')
+        file_handler.setFormatter(formatter)
+        
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        
+        logging.basicConfig(
+            level=logging.DEBUG,
+            handlers=[file_handler, stream_handler]
+        )
 # 初始化日志配置
-log_config = LogConfig()
-logger = log_config.get_logger(__name__)
+setup_log_directory()
+logger = logging.getLogger(__name__)
 
 # 创建实例
 app = FastAPI()
@@ -74,6 +96,8 @@ def process_message(message):
             logger.info(f"Message {message_chain.get_message_id()} is not for me {bot.qq_id} in group")
     else:
         resolver = Resolver(message_chain, bot, message_functions)
+        
+
     
 
 # 运行应用

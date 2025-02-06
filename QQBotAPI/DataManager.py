@@ -1,15 +1,16 @@
 import json
+import logging
 import os
 import sqlalchemy
 from QQBotAPI.message import ReceivedMessageChain
 from QQBotAPI.person import Group, Person
-from shared.log import LogConfig
 from QQBotAPI.config import DataBasePath
 from QQBotAPI.errors import DataNotFoundInDataBaseError
 
 class MessageManager():
     def __init__(self,qq_id):
-        self.logger = LogConfig().get_logger("MessageManager")
+        self.logger = logging.getLogger('MessageManager')
+
         
         # Get database directory from config
         db_dir = DataBasePath().db_path

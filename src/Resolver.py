@@ -5,7 +5,6 @@ import traceback
 from typing import Callable, List
 import uuid
 from QQBotAPI.errors import QQBotAPIError
-from shared.log import LogConfig
 from QQBotAPI.message import *
 
 
@@ -17,7 +16,8 @@ class Resolver:
         self.functions = functions
         #创建全局唯一的 响应ID
         self.response_id = str(uuid.uuid4())
-        self.logger = LogConfig().get_logger(__name__+" - "+self.response_id)
+        self.logger = logging.getLogger(__name__+" - "+self.response_id)
+
         
         self.logger.info(f"New Resolver created with response ID: {self.response_id}")
         try:

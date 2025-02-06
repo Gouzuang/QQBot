@@ -218,7 +218,7 @@ class TextMessage():
         self._text = text
         
     def __str__(self):
-        return self._text
+        return str(self._text)  # 确保返回字符串类型
     
     def get_json(self):
         return {
@@ -296,9 +296,6 @@ class ImageMessage():
         
         with open(file_path, 'wb') as f:
             f.write(response.content)
-            
-        self._is_downloaded = True
-        self._path = file_path
             
         return file_path
    
@@ -435,11 +432,12 @@ class FileMessage():
         return message
       
 class VoiceMessage():
-    def __init__(self, url,file_name,file_size,path):
+    def __init__(self, url, file_name, file_size, path=None):  # 添加path的默认值
         self._url = url
         self._file_name = file_name
         self._file_size = file_size
         self._path = path
+        self._is_downloaded = path is not None
         
     def __str__(self):
         return self._file_name
@@ -512,5 +510,4 @@ class JsonMessage():
             json = json.loads(json)
         data = json.get("data")
         return JsonMessage(data)
-    
-    
+

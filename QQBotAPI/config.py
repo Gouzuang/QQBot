@@ -1,3 +1,5 @@
+import os
+
 class CachePath:
     _instance = None
     
@@ -9,6 +11,15 @@ class CachePath:
             cls._instance.voice_cache = "./cache/voices"
             cls._instance.temp_cache = "./cache/temp"
             cls._instance.data_cache = "./cache/data"
+            
+            # Create directories if they don't exist
+            for path in [cls._instance.image_cache, 
+                        cls._instance.voice_cache,
+                        cls._instance.temp_cache,
+                        cls._instance.data_cache]:
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                    
         return cls._instance
     
     def __init__(self):

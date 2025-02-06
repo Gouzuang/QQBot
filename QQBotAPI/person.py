@@ -18,6 +18,10 @@ class Person():
         return self._nickname
     def get_card(self) -> str:
         return self._card
+    def get_remark(self) -> str:
+        return self._remark
+    def get_level(self) -> int:
+        return self._level
     
     def __str__(self):
         str = ""
@@ -31,7 +35,7 @@ class Person():
     
     def __eq__(self, other):
         if isinstance(other, Person):
-            return self.get_user_id() == other.user_id()
+            return self.get_user_id() == other.get_user_id()
         elif isinstance(other, int):
             return self.get_user_id() == other
         elif isinstance(other, str):
@@ -76,3 +80,10 @@ class Group():
         elif isinstance(other, str):
             return self.get_group_id() == int(other)
         return False
+    
+    def get_json(self) -> dict:
+        return {
+            "group_id": self.get_group_id(),
+            "group_name": self.get_group_name(),
+            "card": self.get_card()
+        }

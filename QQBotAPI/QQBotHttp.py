@@ -7,14 +7,13 @@ import os
 from logging.handlers import RotatingFileHandler
 from .errors import QQBotAPIError
 from requests.exceptions import RequestException
-from shared.log import LogConfig
 
 class QQBotHttp():
     def __init__(self,url,client_id=0):
         self._url = url
         self._client_id = client_id
         
-        self.logger = LogConfig().get_logger('QQBot.HttpAPI')
+        self.logger = logging.getLogger('QQBot.HttpAPI')
         
         self.logger.info("Initializing QQBotHttp with URL: %s", url)
         self._qq_id = self.get_login_info().get('user_id')

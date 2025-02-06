@@ -9,7 +9,6 @@ from .message import *
 from .data import QQ_FACE_DISCRIPTION
 from .person import Person, Group
 from .errors import QQBotAPIError
-from shared.log import LogConfig
 
 class QQBot:
     def __init__(self,url,client_id=0):
@@ -18,14 +17,14 @@ class QQBot:
             url = 'http://' + url
         self.api = QQBotHttp(url,client_id)
         self.qq_id = "Temp"
-        self.logger = LogConfig().get_logger(__name__)
+        self.logger = logging.getLogger(__name__)
         
         self.logger.info("Initializing QQBotHttp with URL: %s", url)
         self.qq_id = self.api.get_login_info().get('user_id')
         self.nickname = self.api.get_login_info().get('nickname')
         self.friend_list = self.get_friend_list()
         
-        self.logger = LogConfig().get_logger(__name__)
+        self.logger = logging.getLogger(__name__ + "." + self.qq_id)
         
         self.MessageManager = DataManager.MessageManager(self.qq_id)
     
