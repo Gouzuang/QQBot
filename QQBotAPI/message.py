@@ -212,6 +212,17 @@ class AtMessage():
     def __str__(self):
         return self.target
     
+    def __eq__(self, value):
+        return self.target == value
+
+    def json(self):
+        return {
+            "type": "at",
+            "data": {
+                "qq": self.target
+            }
+        }
+    
 class FileMessage():
     def __init__(self, url,name,file_size,file_id,path):
         self._url = url

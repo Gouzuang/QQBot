@@ -242,11 +242,11 @@ class QQBotHttp():
         
         raise QQBotAPIError("API request failed after 3 attempts", response)
     
-    def send_group_message(self,message,group_id):
+    def send_group_message(self,message,group_id:int):
         """通过QQ机器人API向指定群组发送消息。
 
         参数:
-            message (str): 要发送的消息内容
+            message (list): 要发送的消息内容
             group_id (int): 接收消息的QQ群号
 
         返回:dict
@@ -256,7 +256,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Sending group message to group %s", group_id)
+        self.logger.info("Sending group message %s to group %s",message, group_id)
         url = self._url + "/send_group_msg"
         params = {
             'group_id': group_id,

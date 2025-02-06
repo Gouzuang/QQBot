@@ -62,7 +62,7 @@ async def submit(request: Request):
 def process_message(message):
     message_chain = ReceivedMessageChain(message)
     bot.MessageManager.add_message(message_chain)
-    # 检查是否是对等待状态的响应
+    """# 检查是否是对等待状态的响应
     try:
         if message_chain.is_reply:
             callback_data = state_manager.get_callback(message_chain.reply_info)
@@ -72,16 +72,21 @@ def process_message(message):
                 callback(message, data)
                 return
     except Exception as e:
-        logger.info(f"message is not a reply for a Resolver: {message}")
+        logger.info(f"message is not a reply for a Resolver: {message}")"""
             
     # 正常的消息处理流程
+    logger.info(f"检测是否需要Resolver: {message_chain.get_message_id()}")
+    resolver = None
     if message_chain.is_group:
         for msg in message_chain.message:
-            if isinstance(msg, AtMessage) and msg.target == bot.qq_id:
+            if isinstance(msg, AtMessage) and int(msg.target) == int(bot.qq_id):
                 resolver = Resolver(message_chain, bot, message_functions, state_manager)
                 break
+        if resolver == None:
+            logger.info(f"Message {message_chain.get_message_id()} is not for me {bot.qq_id} in group")
     else:
         resolver = Resolver(message_chain, bot, message_functions, state_manager)
+    
 
 # 运行应用
 if __name__ == "__main__":

@@ -76,10 +76,10 @@ class QQBot:
             message (List[message]): 消息内容
         """
         if isinstance(group, Group):
-            group_id = group.group_id
+            group_id = group.group_id()
         else:
             group_id = group
         messages = []
         for msg in message:
             messages.append(msg.json())
-        self.api.send_group_message(group_id,messages)
+        self.api.send_group_message(messages,group_id)
