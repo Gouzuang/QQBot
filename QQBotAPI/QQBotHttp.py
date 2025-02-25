@@ -187,7 +187,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Sending private message %s to user %s", message,user_id)
+        self.logger.info("Sending private message %s to user %s", json.dumps(message, indent=4, ensure_ascii=False),user_id)
         url = self._url + "/send_private_msg"
         params = {
             'user_id': user_id,
@@ -221,7 +221,7 @@ class QQBotHttp():
             QQBotAPIError: 当API请求失败或返回非ok状态时抛出
             RequestException: 当网络请求失败时抛出
         """
-        self.logger.info("Sending private message to user %s via get_group %s", user_id, group_id)
+        self.logger.info("Sending private message %s to user %s via get_group %s",json.dumps(message, indent=4, ensure_ascii=False), user_id, group_id)
         url = self._url + "/send_private_msg"
         params = {
             'user_id': user_id,

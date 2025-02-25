@@ -15,19 +15,19 @@ from QQBotAPI.message import *
 import QQBotAPI
 from Resolver import Resolver
 
-def setup_log_directory(self):
+def setup_log_directory():
         """设置日志目录和全局日志文件路径"""
-        self.log_dir = 'logs'
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
+        log_dir = 'logs'
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
             
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.log_file_path = os.path.join(self.log_dir, f'app_{timestamp}.log')
+        log_file_path = os.path.join(log_dir, f'app_{timestamp}.log')
         
         # 配置根日志记录器
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         
-        file_handler = logging.FileHandler(self.log_file_path, encoding='utf-8')
+        file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
         file_handler.setFormatter(formatter)
         
         stream_handler = logging.StreamHandler()

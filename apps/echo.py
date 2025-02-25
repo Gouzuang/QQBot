@@ -1,4 +1,4 @@
-from shared import log, func_template
+from shared import func_template
 import QQBotAPI
 from QQBotAPI.message import ReceivedMessageChain
 

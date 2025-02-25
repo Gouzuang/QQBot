@@ -63,8 +63,8 @@ class MessageManager():
             if sender:
                 query = query.where(self.message_table.c.sender == sender.user_id())
             result = conn.execute(query).fetchone()
-        self.logger.debug(f"Message {message_id} queried from database: {json.dumps(result[4], indent=4, ensure_ascii=False)}")
         if result:
+            self.logger.debug(f"Message {message_id} queried from database: {json.dumps(result[4], indent=4, ensure_ascii=False)}")
             return ReceivedMessageChain.json_from_db(result[4])
         else:
             raise DataNotFoundInDataBaseError(f"Message {message_id} not found in database")

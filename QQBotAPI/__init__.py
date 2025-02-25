@@ -24,7 +24,7 @@ class QQBot:
         self.nickname = self.api.get_login_info().get('nickname')
         self.friend_list = self.get_friend_list()
         
-        self.logger = logging.getLogger(__name__ + "." + self.qq_id)
+        self.logger = logging.getLogger(__name__ + "." + str(self.qq_id))
         
         self.MessageManager = DataManager.MessageManager(self.qq_id)
     
@@ -82,3 +82,21 @@ class QQBot:
         for msg in message:
             messages.append(msg.get_json())
         self.api.send_group_message(messages,group_id)
+        
+    def get_msg_via_id(self,msg_id:int) -> MessageChain | None:
+        """通过消息ID获取消息
+        
+        Args:
+            msg_id (int): 消息ID
+        
+        Returns:
+            MessageChain: 消息对象
+        """
+        msg = self.MessageManager.get_message_via_id(msg_id)
+        if msg:
+            return msg
+        else:
+            msg = MessageChain(self.api.get_msg(msg_id))
+            self.MessageManager.add_message(msg)
+            return msg
+            
