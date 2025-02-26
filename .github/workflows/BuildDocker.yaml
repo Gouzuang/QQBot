@@ -30,7 +30,7 @@ jobs:
       with:
         context: .
         push: false
-        tags: qqbot:latest
+        tags: qqbot:$(date +'%y%m%d%H%M')
         outputs: type=docker,dest=qqbot.tar
 
     - name: Upload Docker Image to Release
