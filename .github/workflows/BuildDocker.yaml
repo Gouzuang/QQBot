@@ -8,13 +8,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  BuildDockerImage:
     runs-on: ubuntu-latest
     # 添加条件判断
     continue-on-error: ${{ github.ref == 'refs/heads/dev' }}
 
     steps:
     - uses: actions/checkout@v3
+
+    - name: Set tag with date
+      run: echo "TAG=qqbot:$(date +'%y%m%d%H%M')" >> $GITHUB_ENV
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
@@ -30,7 +33,7 @@ jobs:
       with:
         context: .
         push: false
-        tags: qqbot:$(date +'%y%m%d%H%M')
+        tags: ${{ env.TAG }}
         outputs: type=docker,dest=qqbot.tar
 
     - name: Upload Docker Image to Release
