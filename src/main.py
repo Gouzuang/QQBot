@@ -2,6 +2,8 @@ from datetime import datetime
 import json
 import sys
 import traceback
+
+import yaml
 from fastapi import FastAPI, Request
 import logging
 import os
@@ -43,7 +45,9 @@ logger = logging.getLogger(__name__)
 
 # 创建实例
 app = FastAPI()
-bot = QQBotAPI.QQBot("192.168.3.100:3000",1)
+with open('/AppData/config.yaml', 'r') as config_file:
+    config = yaml.safe_load(config_file)
+bot = QQBotAPI.QQBot(config['bot']['host'], 1)
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
