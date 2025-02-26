@@ -25,16 +25,16 @@ jobs:
     #     username: ${{ secrets.DOCKER_HUB_USERNAME }}
     #     password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-    - name: Build and upload to Release
+    - name: Build and export Docker Image
       uses: docker/build-push-action@v3
       with:
         context: .
         push: false
         tags: qqbot:latest
-        outputs: type=image,name=qqbot:latest
+        outputs: type=docker,dest=qqbot.tar
 
     - name: Upload Docker Image to Release
       uses: actions/upload-artifact@v4
       with:
         name: qqbot-image
-        path: qqbot:latest
+        path: qqbot.tar
