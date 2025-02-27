@@ -1,22 +1,24 @@
-FROM python:3.11-slim
+FROM python:3.12
 LABEL authors="gouzu"
 
-# 复制项目代码
-COPY /QQBotAPI /QQBotAPI
-COPY /shared /shared
-COPY /src /src
-WORKDIR .
+# Set the working directory
+WORKDIR /app
 
-# 安装Python依赖
-COPY requirements.txt /tmp/requirements.txt
-RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
+# Copy project code
+COPY /QQBotAPI /app/QQBotAPI
+COPY /shared /app/shared
+COPY /src /app
+COPY requirements.txt /app/requirements.txt
 
-# 暴露端口
+# Install Python dependencies
+RUN pip3 install --no-cache-dir -r /app/requirements.txt
+
+# Expose port
 EXPOSE 8000
 
-# 创建并暴露 databases, apps, AppData 目录
+# Create and expose directories
 RUN mkdir -p /databases /apps /AppData
 VOLUME ["/databases", "/apps", "/AppData"]
 
-# 修正入口点
-ENTRYPOINT ["python3", "./src/main.py"]
+# Run the application
+ENTRYPOINT ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
