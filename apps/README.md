@@ -11,3 +11,4 @@ class需实现以下接口：
 3. 实例化时响应数据
 
 其中如果type为extern_call_function需实现路由表
+type可以是：message_function ，quiet_function ， regular_task_function ， extern_call_function

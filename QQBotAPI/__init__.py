@@ -11,11 +11,11 @@ from .person import Person, Group
 from .errors import QQBotAPIError
 
 class QQBot:
-    def __init__(self,url,client_id=0):
+    def __init__(self,url):
         # 确保 URL 包含协议前缀
         if not url.startswith(('http://', 'https://')):
             url = 'http://' + url
-        self.api = QQBotHttp(url,client_id)
+        self.api = QQBotHttp(url)
         self.qq_id = "Temp"
         self.logger = logging.getLogger(__name__)
         

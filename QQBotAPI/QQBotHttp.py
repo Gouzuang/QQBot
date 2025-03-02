@@ -9,9 +9,8 @@ from .errors import QQBotAPIError
 from requests.exceptions import RequestException
 
 class QQBotHttp():
-    def __init__(self,url,client_id=0):
+    def __init__(self,url):
         self._url = url
-        self._client_id = client_id
         
         self.logger = logging.getLogger('QQBot.HttpAPI')
         
@@ -1225,28 +1224,28 @@ class QQBotHttp():
         }
         return self._make_request('POST', url, params=params)
         
-        def set_group_whole_ban(self, group_id, enable=True):
-            """群全员禁言。
+    def set_group_whole_ban(self, group_id, enable=True):
+        """群全员禁言。
             
-            参数:
-                group_id (int): 群号
-                enable (bool): 是否开启全员禁言
-                    
-            返回:
-                bool: 操作是否成功
-                    
-            异常:
-                QQBotAPIError: 当API请求失败或返回非ok状态时抛出
-                RequestException: 当网络请求失败时抛出
-            """
-            self.logger.info("Setting whole get_group ban for get_group %s: %s",
+        参数:
+            group_id (int): 群号
+            enable (bool): 是否开启全员禁言
+
+        返回:
+            bool: 操作是否成功
+
+        异常:
+            QQBotAPIError: 当API请求失败或返回非ok状态时抛出
+            RequestException: 当网络请求失败时抛出
+        """
+        self.logger.info("Setting whole get_group ban for get_group %s: %s",
                             group_id, "enable" if enable else "disable")
-            url = self._url + "/set_group_whole_ban"
-            params = {
+        url = self._url + "/set_group_whole_ban"
+        params = {
                 'group_id': group_id,
                 'enable': enable
-            }
-            return self._make_request('POST', url, params=params)
+        }
+        return self._make_request('POST', url, params=params)
     
     def set_group_anonymous(self, group_id, enable=True):
         """群匿名聊天。
