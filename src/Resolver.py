@@ -71,9 +71,8 @@ class Resolver:
         """查找对应的函数"""
         response_function = []
         for function in self.functions:
-            if function.register()['type'] == 'message_function':
-                res = function.check(self.message)
-                if res != "":
-                    self.logger.info(f"Found function: {function.register()['name']} in condition: {res}")
-                    response_function.append(function)
+            res = function.check(self.message)
+            if res != "" and res != False and res != None:
+                self.logger.info(f"Found function: {function.register()['name']} in condition: {res}")
+                response_function.append(function)
         return response_function

@@ -122,7 +122,7 @@ class ReceivedMessageChain(MessageChain):
     def text_only(self):
         return "".join([str(msg) for msg in self.message if isinstance(msg, TextMessage)])
     
-    def reply_chain(self,message):
+    def reply_chain(self):
         """回复消息"""
         return ReplyMessageChain(self)
     

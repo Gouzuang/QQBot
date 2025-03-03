@@ -36,7 +36,7 @@ def setup_log_directory():
         stream_handler.setFormatter(formatter)
         
         logging.basicConfig(
-            level=logging.DEBUG,
+            level=logging.INFO,
             handlers=[file_handler, stream_handler]
         )
 # 初始化日志配置
@@ -80,7 +80,7 @@ for _, name, _ in pkgutil.iter_modules(['apps']):
     for function in module.functions:
         if function.register()['type'] == 'message_function':
             message_functions.append(function)
-        elif function.register()[type] == 'quiet_function':
+        elif function.register()['type'] == 'quiet_function':
             quiet_functions.append(function)
         elif function.register()['type'] == 'regular_task_function':
             regular_task_functions.append(function)
@@ -118,7 +118,7 @@ def process_message(message):
                 resolver = Resolver(message_chain, bot, message_functions,is_quiet_function=False)
                 break
         if resolver == None:
-            logger.info(f"Message {message_chain.get_message_id()} is not for me {bot.qq_id} in group, finding quiet functions")
+            logger.info(f"Message {message_chain.get_message_id()} is not for me {bot.qq_id} in group, searching for quiet functions")
             resolver = Resolver(message_chain, bot, quiet_functions, is_quiet_function=True)
     else:
         resolver = Resolver(message_chain, bot, message_functions, is_quiet_function=False)
