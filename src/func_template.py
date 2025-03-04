@@ -1,17 +1,20 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from QQBotAPI.message import MessageChain
+from QQBotAPI import QQBot
+from QQBotAPI.message import MessageChain, ReceivedMessageChain
+
 
 class FunctionTemplate(ABC):
     """Base template class for bot functions"""
-    
-    def __init__(self):
-        """Initialize function instance"""
-        self.name = self.register()[0]
-        self.type = self.register()[1]
 
     @abstractmethod
-    def check(self, message: MessageChain) -> str:
+    def __init__(self,msg:ReceivedMessageChain,bot:QQBot):
+        """Initialize function instance"""
+        pass
+
+    @classmethod
+    @abstractmethod
+    def check(cls, message: MessageChain) -> str:
         """
         Check if message matches function criteria
         Args:
@@ -21,12 +24,20 @@ class FunctionTemplate(ABC):
         """
         pass
 
+    @classmethod
     @abstractmethod
-    def register(self) -> tuple[str, str]:
+    def register(cls) -> tuple[str, str]:
         """
         Register function name and type
         Returns:
             tuple[str, str]: (function_name, function_type)
+        """
+        pass
+
+    @abstractmethod
+    def process(self):
+        """
+        Process message
         """
         pass
 
@@ -36,6 +47,4 @@ class FunctionTemplate(ABC):
         Returns:
             Optional[dict]: Route table if type is extern_call_function, None otherwise
         """
-        if self.type == "extern_call_function":
-            return {}
-        return None
+        pass

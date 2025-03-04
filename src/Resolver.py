@@ -2,10 +2,11 @@ import logging
 from logging.handlers import RotatingFileHandler
 import os
 import traceback
-from typing import Callable, List
+from typing import Callable, List, Type
 import uuid
 from QQBotAPI.errors import QQBotAPIError
 from QQBotAPI.message import *
+from src.func_template import FunctionTemplate
 
 
 class MultipleFunctionFoundError():
@@ -15,7 +16,7 @@ class NoFunctionFoundError():
 
 class Resolver:
     """每个消息传入都会生成Resolver，用于响应消息"""
-    def __init__(self, message:Union[MessageChain,ReceivedMessageChain], QQBot, functions:List[Callable], is_quiet_function = False):
+    def __init__(self, message:Union[MessageChain,ReceivedMessageChain], QQBot, functions:List[FunctionTemplate], is_quiet_function = False):
         self.message = message
         self.QQBot = QQBot
         self.functions = functions
@@ -38,7 +39,7 @@ class Resolver:
                 if isinstance(message, ReceivedMessageChain) and not self.is_quiet_function:
                     self.message.reply("发生错误: " + str(e),QQBot)
 
-    def _use_function(self, function:List[Callable]):
+    def _use_function(self, function:List[Type[FunctionTemplate]]):
         if len(function) == 0:
             self.logger.info("No function found")
             sent_message = self.message.reply_chain()
@@ -48,14 +49,14 @@ class Resolver:
             ])
         elif len(function) == 1:
             self.logger.info(f"Function {function[0].register()['name']} selected")
-            function[0](self.message, self.QQBot)
+            function[0](self.message, self.QQBot).process()
         elif len(function) > 1:
             if self.is_quiet_function:
                 self.logger.info("Multiple functions found, but is quiet function")
                 for f in function:
                     try:
                         self.logger.info(f"Function {f.register()['name']} Running")
-                        f(self.message, self.QQBot)
+                        f(self.message, self.QQBot).process()
                     except Exception as e:
                         self.logger.error(f"Error processing message: {str(e)}")
                         self.logger.error(traceback.format_exc())
