@@ -163,8 +163,10 @@ cython_debug/
 #密钥文件
 keys.*
 
-log/*
-apps/*
+logs/
+databases/
+apps/private_*
+AppData/
 
 .vscode
 

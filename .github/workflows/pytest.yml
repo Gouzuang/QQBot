@@ -2,13 +2,16 @@ name: Test QQQBotAPI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ '*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ '*' ]
+  workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    # 添加条件判断
+    continue-on-error: ${{ startsWith(github.ref, 'refs/heads/dev') }}
 
     steps:
     - uses: actions/checkout@v3

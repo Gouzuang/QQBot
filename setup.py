@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name="QQBotAPI",
-    version="0.1.0",
+    version="0.1.0dev0",
     author="Gouzuang",
     description="QQ Bot API implementation",
-    packages=find_packages(),
+    packages=find_packages(include=['QQBotAPI', 'QQBotAPI.*', 'shared', 'shared.*']),
     install_requires=[
         "requests>=2.31.0",
         "websockets>=12.0",
